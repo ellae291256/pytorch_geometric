@@ -46,7 +46,7 @@ def as_key_tensor(
     except Exception:
         device = device or torch.get_default_device()
         key = torch.tensor(
-            [xxhash.xxh64(x).intdigest() & 0x7FFFFFFFFFFFFFFF for x in key],
+            [xxhash.xxh64(x.encode()).intdigest() & 0x7FFFFFFFFFFFFFFF for x in key],
             dtype=torch.int64, device=device)
 
     if key.element_size() == 1:
@@ -228,6 +228,11 @@ class HashTensor(Tensor):
         dtype: Optional[torch.dtype],
     ) -> 'HashTensor':
 
+        if not isinstance(_map, (Tensor, dict, pd.Categorical)):
+            raise TypeError(
+                f"Unsupported map type '{type(_map).__name__}'. "
+                "Expected Tensor, dict-like, or pandas Categorical.")
+
         if value is not None:
             dtype = value.dtype
             size = value.size()
@@ -268,8 +273,12 @@ class HashTensor(Tensor):
         elif (torch_geometric.typing.WITH_CUDA_HASH_MAP
               or torch_geometric.typing.WITH_CPU_HASH_MAP):
             key = self._map.keys().to(self.device)
-        else:
+        elif isinstance(self._map, (dict, pd.Categorical)):
             key = torch.from_numpy(self._map.categories.to_numpy())
+        else:
+            raise TypeError(
+                f"Unsupported map type '{type(self._map).__name__}'. "
+                "Expected Tensor, dict-like, or pandas Categorical.")
 
         return key.to(self.device)
 
