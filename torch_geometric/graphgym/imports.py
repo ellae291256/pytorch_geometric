@@ -2,15 +2,19 @@ import warnings
 
 import torch
 
-try:
-    import pytorch_lightning as pl
-    _pl_is_available = True
-except ImportError:
+with warnings.catch_warnings():
+    # Third-party deprecation warnings raised while importing optional
+    # Lightning dependencies must not abort module import:
+    warnings.simplefilter('ignore', DeprecationWarning)
     try:
-        import lightning.pytorch as pl
+        import pytorch_lightning as pl
         _pl_is_available = True
     except ImportError:
-        _pl_is_available = False
+        try:
+            import lightning.pytorch as pl
+            _pl_is_available = True
+        except ImportError:
+            _pl_is_available = False
 
 if _pl_is_available:
     LightningModule = pl.LightningModule
